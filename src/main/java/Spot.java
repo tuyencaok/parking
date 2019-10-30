@@ -1,4 +1,4 @@
-public abstract class Spot {
+public  class Spot {
     private boolean isOccupied;
     private int spotNumber;
 
@@ -36,6 +36,7 @@ public abstract class Spot {
     }
 
 }
+/*
 class MotoSpot extends Spot {
 
     MotoSpot(int spotNumber){
@@ -53,4 +54,4 @@ class BusSpot extends Spot {
     BusSpot(int spotNumber){
         super(spotNumber);
     }
-}
+}*/

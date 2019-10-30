@@ -1,19 +1,28 @@
 import java.util.*;
 
-public abstract class ParkingLot {
-    private final Collection<ParkingSpace> availableExpress = new HashSet<>();
+public class ParkingLot {
+  /*  private final Collection<ParkingSpace> availableExpress = new HashSet<>();
     private final Collection<ParkingSpace> availableRegular = new HashSet<>();
 
     private final Collection<ParkingSpace> allExpressSpaces = new HashSet<>();
     private final Collection<ParkingSpace> allRegularSpaces = new HashSet<>();
 
     private final Map<Vehicle, ParkingSpace> usedExpress = new HashMap<>();
-    private final Map<Vehicle, ParkingSpace> usedRegular = new HashMap<>();
+    private final Map<Vehicle, ParkingSpace> usedRegular = new HashMap<>(); */
+
+    private final List<Spot> availableExpress = new ArrayList<>();
+    private final List<Spot> availableRegular = new ArrayList<>();
+
+    private final List<Spot> allExpressSpaces = new ArrayList<>();
+    private final List<Spot> allRegularSpaces = new ArrayList<>();
+
+    private final Map<Vehicle, Spot> usedExpress = new HashMap<>();
+    private final Map<Vehicle, Spot> usedRegular = new HashMap<>();
 
     int expressCapacity; // spot type 1
     int regularCapacity; // spot type 0
-    int parkingGroup; //1,2 or 3
-    int feeAlgorithm;
+    ParkingGroup parkingGroup; //1 or 2
+    //int feeAlgorithm;
     //int numofInGate;
     //int numofOutGate;
     private double income = 0.0;
@@ -21,94 +30,127 @@ public abstract class ParkingLot {
 
     //ParkingLot Constructor
     private static ParkingLot pl = null;
+    private Object Exception;
+    private String lotName;
     //constructor
-    public ParkingLot(int expressCapacity,int regularCapacity, int parkingGroup) {
+    public ParkingLot(String lotName ,int expressCapacity,int regularCapacity, ParkingGroup parkingGroup) {
+        this.lotName = lotName;
         this.expressCapacity = expressCapacity;
         this.regularCapacity = regularCapacity;
+        this.parkingGroup=parkingGroup;
         //this.numofInGate = numofInGate ;
         //this.numofOutGate = numofOutGate ;
 
         //create all parking spaces and initially assign all parking spaces as available
-        Random random = new Random();
+        //Random random = new Random();
         for (int i = 0; i < expressCapacity; i++) {
-            allExpressSpaces.add(new ParkingSpace(1 + random.nextInt(3)));
+            allExpressSpaces.add(new Spot(i));
         }
         for (int i = 0; i < regularCapacity; i++) {
-            allRegularSpaces.add(new ParkingSpace(1 + random.nextInt(3)));
+            allRegularSpaces.add(new Spot(i));
         }
         // all slots initially free
         availableExpress.addAll(allExpressSpaces);
         availableRegular.addAll(allRegularSpaces);
 
     }
-    //create only one parking lot
-    /*
-    public static ParkingLot getParkingLot() {
-        if (pl == null) {
-            pl = new ParkingLot();
-        }
-        return pl;
-    } */
 
-    public Ticket parkVehicle(Vehicle vehicle) {
-        if (vehicle.getSpacesNeeded()==1) {
-        ParkingSpace targetSlot = availableExpress.stream().filter(p -> p.accepts(vehicle)).findFirst()
-                .orElseThrow(() -> new RuntimeException("No free slot for " + vehicle));
-            targetSlot.addVehicle(vehicle);
-            targetSlot.addVehicle(vehicle);
-            if (!targetSlot.isFree()) {
-                availableExpress.remove(targetSlot);
+    public ParkingGroup getParkingGroup() {
+        return parkingGroup;
+    }
+    public String getLotName() {
+        return lotName;
+    }
+    public int numofAvailableExpress(){
+        return availableExpress.size();
+    }
+    public int numofAvailableRegular(){
+        return availableRegular.size();
+    }
+
+    public Ticket parkVehicle(Vehicle vehicle, ParkingLot parkingLot) {
+
+        if (vehicle.getSpacesNeeded()==1) { //express parking
+            if (availableExpress.size() > 0) {
+                Spot parkingSpot = availableExpress.get(0);
+                usedExpress.put(vehicle, parkingSpot);
+                parkingSpot.addVeh();
+                availableExpress.remove(0);
+
             }
-            usedExpress.put(vehicle, targetSlot)
-        }
-        else {
-            ParkingSpace targetSlot = availableRegular.stream().filter(p -> p.accepts(vehicle)).findFirst()
-                    .orElseThrow(() -> new RuntimeException("No free slot for " + vehicle));
-
-            targetSlot.addVehicle(vehicle);
-            if (!targetSlot.isFree()) {
-                availableRegular.remove(targetSlot);
+            else {
+                new RuntimeException("No free slot for " + vehicle);
             }
-            usedRegular.put(vehicle, targetSlot);
         }
 
 
+        else { //regular parking
+            if (availableRegular.size() > 0) {
+                Spot parkingSpot = availableRegular.get(0);
+                usedRegular.put(vehicle, parkingSpot);
+                parkingSpot.addVeh();
+                availableRegular.remove(0);
 
-        return new Ticket(vehicle);
+            }
+            else {
+                new RuntimeException("No free slot for " + vehicle);
+            }
+        }
+        return new Ticket(vehicle,parkingLot);
     }
 
     public void unparkVehicle(Ticket ticket) {
+        Vehicle vehicle = ticket.getVehicle();
+        if (vehicle.getSpacesNeeded()==1) {
 
-        ParkingSpace targetSlot = usedExpress.remove(ticket.getVehicle());
-        targetSlot.removeVehicle(ticket.getVehicle());
-        availableExpress.add(targetSlot); // set keeps uniqueness
+            Spot releasedSpot = usedExpress.get(vehicle);
+            releasedSpot.removeVeh();
+
+            availableExpress.add(releasedSpot);
+            usedExpress.remove(vehicle);
+
+        }
+        else { //regular parking
+            Spot releasedSpot = usedRegular.get(vehicle);
+            releasedSpot.removeVeh();
+
+            availableRegular.add(releasedSpot);
+            usedRegular.remove(vehicle);
+        }
         income += ticket.calculateCost(CALCULATOR);
     }
 
-    @Override
+   @Override
     public String toString() {
-        return String.format("ParkingLot [income=%.2f, availableExpress=%d,availableRegular=%d, parkingVehicles=%d]", income, availableExpress.size(),
-                usedExpress.size());
+        return String.format("%s [income=%.2f, parkedExpress=%d, availableExpress=%d,parkedRegular=%d, availableRegular=%d]",getLotName(), income,usedExpress.size(),availableExpress.size(),usedRegular.size(),
+                availableRegular.size());
     }
 }
+/*
+class ParkingLotA extends ParkingLot {
 
-class ParkingLot1 extends ParkingLot {
-
-    public ParkingLot1(int expressCapacity,int regularCapacity, int parkingGroup) {
+    public ParkingLotA(int expressCapacity, int regularCapacity, ParkingGroup parkingGroup) {
         super(expressCapacity, regularCapacity, parkingGroup);
+
+        expressCapacity = (int)Math.random()*3;
+        regularCapacity = (int)Math.random()*7;
+        parkingGroup = new ParkingGroup1();
+    }
+    public ParkingGroup getParkingGroup() {
+        return parkingGroup;
     }
 }
 
-class ParkingLot2 extends ParkingLot {
+class ParkingLotB extends ParkingLot {
 
-    public ParkingLot2(int expressCapacity,int regularCapacity, int parkingGroup) {
+    public ParkingLotB(int expressCapacity, int regularCapacity, ParkingGroup parkingGroup) {
         super(expressCapacity, regularCapacity, parkingGroup);
-    }
-}
 
-class ParkingLot3 extends ParkingLot {
-
-    public ParkingLot3(int expressCapacity,int regularCapacity, int parkingGroup) {
-        super(expressCapacity, regularCapacity, parkingGroup);
+        expressCapacity = (int)Math.random()*5;
+        regularCapacity = (int)Math.random()*20;
+        parkingGroup = new ParkingGroup2();
     }
-}
+    public ParkingGroup getParkingGroup() {
+        return parkingGroup;
+    }
+} */
